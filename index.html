@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Battleship</title>
+    <style>
+        body {
+            font-family: Arial;
+            text-align: center;
+        }
+        #grid {
+            display: grid;
+            grid-template-columns: repeat(10, 40px);
+            gap: 5px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .cell {
+            width: 40px;
+            height: 40px;
+            background-color: lightblue;
+            border: 1px solid #333;
+            cursor: pointer;
+        }
+        .hit { background-color: red; }
+        .miss { background-color: gray; }
+    </style>
+</head>
+<body>
+
+<h1>Battleship</h1>
+
+<input id="username" placeholder="Enter username">
+<button onclick="createPlayer()">Create Player</button>
+<button onclick="createGame()">Create Game</button>
+
+<p id="status"></p>
+
+<div id="grid"></div>
+
+<script>
+let playerId = null;
+let gameId = null;
+let targetId = null;
+
+// create grid
+function createGrid() {
+    const grid = document.getElementById('grid');
+    grid.innerHTML = '';
+
+    for (let r = 0; r < 10; r++) {
+        for (let c = 0; c < 10; c++) {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.onclick = () => fire(r, c, cell);
+            grid.appendChild(cell);
+        }
+    }
+}
+
+createGrid();
+
+// create player
+function createPlayer() {
+    const username = document.getElementById('username').value;
+
+    fetch('/players', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username })
+    })
+    .then(res => res.json())
+    .then(data => {
+        playerId = data.player_id;
+        document.getElementById('status').innerText = "Player ID: " + playerId;
+    });
+}
+
+// create game
+function createGame() {
+    fetch('/games', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ player_id: playerId, grid_size: 10 })
+    })
+    .then(res => res.json())
+    .then(data => {
+        gameId = data.game_id;
+        targetId = playerId; // temp (single player test)
+        document.getElementById('status').innerText = "Game ID: " + gameId;
+    });
+}
+
+// fire shot
+function fire(row, col, cell) {
+    if (!gameId) {
+        alert("Create a game first!");
+        return;
+    }
+
+    fetch(`/games/${gameId}/move`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            attacker_id: playerId,
+            target_id: targetId,
+            row: row,
+            col: col
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.result === 'hit') {
+            cell.classList.add('hit');
+        } else {
+            cell.classList.add('miss');
+        }
+    });
+}
+</script>
+
+</body>
+</html>

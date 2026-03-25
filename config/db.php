@@ -1,10 +1,10 @@
 <?php
 define('DB_HOST',    'localhost');
 define('DB_NAME',    'u933585015_BattleShipDB');   // your actual DB name
-define('DB_USER',    'raczLe');          // from Hostinger
+define('DB_USER',    'u933585015_raczLe');          // from Hostinger
 define('DB_PASS',    'BattleShip#0001');          // from Hostinger
 define('DB_CHARSET', 'utf8mb4');
-define('TEST_PASSWORD', 'cpsc3750testmode');
+define('TEST_PASSWORD', 'clemson-test-2026'); 
 
 function get_db(): PDO {
     static $pdo = null;

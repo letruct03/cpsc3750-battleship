@@ -10,57 +10,53 @@
 // =============================================================
 
 declare(strict_types=1);
-
 function createGame(): void {
     $db   = get_db();
     $body = get_body();
 
-    $grid_size  = isset($body['grid_size'])  ? (int)$body['grid_size']  : 10;
-    $creator_id = isset($body['player_id'])  ? (int)$body['player_id']  : 0;
+    $grid_size  = (int)($body['grid_size'] ?? 10);
+    $creator_id = (int)($body['player_id'] ?? 0);
 
     if ($grid_size < 5 || $grid_size > 20) {
-        json_response(['error' => 'grid_size must be between 5 and 20.'], 400);
+        json_response(['error' => 'Invalid grid size.'], 400);
     }
     if ($creator_id <= 0) {
-        json_response(['error' => 'player_id is required to create a game.'], 400);
+        json_response(['error' => 'player_id required'], 400);
     }
 
-    // Verify player exists
-    $p = $db->prepare('SELECT player_id FROM Players WHERE player_id = ?');
-    $p->execute([$creator_id]);
-    if (!$p->fetch()) {
-        json_response(['error' => 'Player not found.'], 404);
+    $check = $db->prepare('SELECT player_id FROM Players WHERE player_id = ?');
+    $check->execute([$creator_id]);
+    if (!$check->fetch()) {
+        json_response(['error' => 'Player not found'], 404);
     }
 
     $db->beginTransaction();
+
     try {
         $stmt = $db->prepare(
-            'INSERT INTO Games (grid_size, status) VALUES (?, "waiting")'
+            'INSERT INTO Games (grid_size, status, current_turn)
+             VALUES (?, "waiting", NULL)'
         );
         $stmt->execute([$grid_size]);
         $game_id = (int)$db->lastInsertId();
 
-        // Auto-join creator as turn_order = 0
-        $join = $db->prepare(
-            'INSERT INTO GamePlayers (game_id, player_id, turn_order) VALUES (?, ?, 0)'
-        );
-        $join->execute([$game_id, $creator_id]);
+        $db->prepare(
+            'INSERT INTO GamePlayers (game_id, player_id, turn_order)
+             VALUES (?, ?, 0)'
+        )->execute([$game_id, $creator_id]);
 
         $db->commit();
+
     } catch (Exception $e) {
         $db->rollBack();
-        json_response(['error' => 'Failed to create game.'], 500);
+        json_response(['error' => 'Failed'], 500);
     }
 
     json_response([
-        'game_id'    => $game_id,
-        'grid_size'  => $grid_size,
-        'status'     => 'waiting',
-        'players'    => [['player_id' => $creator_id, 'turn_order' => 0]],
-        'created_at' => date('c'),
+        'game_id' => $game_id,
+        'status' => 'waiting'
     ], 201);
 }
-
 function listGames(): void {
     $db     = get_db();
     $status = $_GET['status'] ?? null;
